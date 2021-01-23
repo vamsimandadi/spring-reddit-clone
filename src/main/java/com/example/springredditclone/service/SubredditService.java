@@ -1,6 +1,7 @@
 package com.example.springredditclone.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.transaction.Transactional;
@@ -8,6 +9,8 @@ import javax.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import com.example.springredditclone.dto.SubredditDto;
+import com.example.springredditclone.exception.SpringRedditException;
+import com.example.springredditclone.mapper.SubredditMapper;
 import com.example.springredditclone.model.Subreddit;
 import com.example.springredditclone.repository.SubredditJpaRepository;
 
@@ -21,25 +24,29 @@ import lombok.extern.slf4j.Slf4j;
 public class SubredditService {
 	
 	private SubredditJpaRepository subredditRepo;
+	private SubredditMapper subredditMapper;
 	
 	@Transactional
 	public SubredditDto save(SubredditDto subredditDto){
-		Subreddit save = subredditRepo.save(mapSubredditDto(subredditDto));
+		Subreddit save = subredditRepo.save(subredditMapper.mapDtoToSubreddit(subredditDto));
 		log.info("subreddit: " + save);
 		subredditDto.setId(save.getId());
 		return subredditDto;
 	}
 	
-	private Subreddit mapSubredditDto(SubredditDto subredditDto){
-			 return Subreddit.builder().name(subredditDto.getName()).description(subredditDto.getDescription()).build();
-	}	
 	
 	@Transactional
 	public List<SubredditDto> getAllSubreddits() {
-		return subredditRepo.findAll().stream().map(this::mapToDto).collect(Collectors.toList());
+		return subredditRepo.findAll().stream().map(subredditMapper::mapSubredditToDto).collect(Collectors.toList());
+	}
+
+	
+	@Transactional
+	public SubredditDto getSubreddit(Long id) {
+		Optional<Subreddit> subreddit = subredditRepo.findById(id);
+		subreddit.orElseThrow(() -> new SpringRedditException("Subreddit with id: " + id + " doesn't exists."));
+		return subredditMapper.mapSubredditToDto(subreddit.get());
 	}
 	
-	private SubredditDto mapToDto(Subreddit subreddit){
-		return SubredditDto.builder().id(subreddit.getId()).name(subreddit.getName()).description(subreddit.getDescription()).numberOfPosts(subreddit.getPosts().size()).build();
-	}
+	
 }

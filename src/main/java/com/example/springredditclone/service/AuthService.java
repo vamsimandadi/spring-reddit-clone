@@ -4,19 +4,19 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-import javax.transaction.Transactional;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.springredditclone.dto.AuthenticationResponse;
 import com.example.springredditclone.dto.LoginRequest;
 import com.example.springredditclone.dto.RegisterRequest;
 import com.example.springredditclone.exception.SpringRedditException;
+import com.example.springredditclone.exception.UserNotFoundException;
 import com.example.springredditclone.model.NotificationEmail;
 import com.example.springredditclone.model.User;
 import com.example.springredditclone.model.VerificationToken;
@@ -76,7 +76,6 @@ public class AuthService {
 				User user = userRepository.findByUsername(username).orElseThrow(() -> new SpringRedditException("User not found with name - "+username));
 				user.setEnabled(true);
 				userRepository.save(user);
-				
 		}
 		
 
@@ -85,6 +84,16 @@ public class AuthService {
 				SecurityContextHolder.getContext().setAuthentication(authentication); //checks if the user is login or not
 				String token =  jwtprovider.generateToken(authentication);
 				return new AuthenticationResponse(token, loginRequest.getUsername());
+		}
+		
+		@Transactional(readOnly = true)
+		public User getCurrentUser(){
+			org.springframework.security.core.userdetails.User principal = (org.springframework.security.core.userdetails.User) SecurityContextHolder.
+	                getContext().getAuthentication().getPrincipal();
+			return userRepository.findByUsername(principal.getUsername())
+											     .orElseThrow(() -> new UserNotFoundException("User name not found " + principal.getUsername()));
+			
+			
 		}
 
 		
